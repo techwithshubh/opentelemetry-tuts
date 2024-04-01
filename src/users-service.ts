@@ -14,7 +14,7 @@ const app = express();
 
 app.get("/user/:userid", async (request: Request, response: Response) => {
   const traceparent = request.get("TraceContext") || "";
-  console.log(traceparent)
+  
   const parentCtx = propagator.extract(
     ROOT_CONTEXT,
     JSON.parse(traceparent),
