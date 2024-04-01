@@ -1,5 +1,10 @@
 # Dependency directories
 node_modules/
+
+tmp/
+
 signoz
 
 .DS_Store
+
+logs/

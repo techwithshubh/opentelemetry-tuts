@@ -12,6 +12,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { WinstonInstrumentation } from "@opentelemetry/instrumentation-winston";
 
 const init = (serviceName: string, serviceVersion: string) => {
   const resource = Resource.default().merge(
@@ -35,7 +36,7 @@ const init = (serviceName: string, serviceVersion: string) => {
   provider.register();
 
   registerInstrumentations({
-    instrumentations: [new HttpInstrumentation()],
+    instrumentations: [new HttpInstrumentation(), new WinstonInstrumentation()],
   });
 
   const tracer = provider.getTracer(serviceName);
