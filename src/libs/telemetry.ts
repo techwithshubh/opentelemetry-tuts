@@ -5,12 +5,13 @@ import {
 } from "@opentelemetry/semantic-conventions";
 import opentelemetry from "@opentelemetry/api";
 import {
-  BasicTracerProvider,
   BatchSpanProcessor,
   ConsoleSpanExporter,
 } from "@opentelemetry/sdk-trace-base";
-import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 
 const init = (serviceName: string, serviceVersion: string) => {
   const resource = Resource.default().merge(
@@ -20,7 +21,7 @@ const init = (serviceName: string, serviceVersion: string) => {
     })
   );
 
-  const provider = new BasicTracerProvider({
+  const provider = new NodeTracerProvider({
     resource: resource,
   });
 
@@ -33,11 +34,13 @@ const init = (serviceName: string, serviceVersion: string) => {
   );
   provider.register();
 
+  registerInstrumentations({
+    instrumentations: [new HttpInstrumentation()],
+  });
+
   const tracer = provider.getTracer(serviceName);
 
-  const propagator = new W3CTraceContextPropagator();
-
-  return { tracer, propagator };
+  return { tracer };
 };
 
 export default init;

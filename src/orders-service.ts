@@ -1,62 +1,37 @@
 import init from "./libs/telemetry";
-const { tracer,propagator } = init("orders-service", "0.0.1");
+const { tracer } = init("orders-service", "0.0.1");
 
 import axios from "axios";
 import express, { Request, Response } from "express";
 import { faker } from "@faker-js/faker";
-import { ROOT_CONTEXT, Span, SpanKind, defaultTextMapSetter,trace } from "@opentelemetry/api";
-import {
-  SEMATTRS_HTTP_METHOD,
-  SEMATTRS_HTTP_ROUTE,
-} from "@opentelemetry/semantic-conventions";
+import { context, trace } from "@opentelemetry/api";
 
 const app = express();
 
 app.get("/order", async (request: Request, response: Response) => {
-  tracer.startActiveSpan(
-    "Get Order Details",
-    { kind: SpanKind.CLIENT },
-    async (span: Span) => {
-      try {
-        const userId = request.get("X-User-Id");
-        if (!userId) {
-          throw new Error("A really bad error :/");
-        }
-        span.setAttribute(SEMATTRS_HTTP_METHOD, "GET");
-        span.setAttribute(SEMATTRS_HTTP_ROUTE, `/user/${userId}`);
-        span.addEvent("Calling Users Service")
-
-        const carrier = {}
-
-        propagator.inject(
-            trace.setSpanContext(ROOT_CONTEXT, span.spanContext()),
-            carrier,
-            defaultTextMapSetter
-        );
-
-        const user = await axios.get(`http://localhost:8090/user/${userId}`, {
-            headers: {
-                'TraceContext': JSON.stringify(carrier)
-            }
-        });
-
-        const order = {
-          productName: faker.commerce.productName(),
-          productDescription: faker.commerce.productDescription(),
-          price: faker.commerce.price(),
-        };
-        span.setStatus({
-          code: user.status,
-        });
-        span.end();
-        response.json(Object.assign(order, user.data));
-      } catch (e: any) {
-        span.recordException(e);
-        span.end()
-        response.sendStatus(500);
-      }
+  try {
+    const userId = request.get("X-User-Id");
+    if (!userId) {
+      throw new Error("A really bad error :/");
     }
-  );
+
+    const activeSpan = trace.getSpan(context.active())
+
+    activeSpan?.setAttribute("custom.user.id", userId)
+
+    const user = await axios.get(`http://localhost:8090/user/${userId}`);
+    
+    activeSpan?.addEvent("User generated successfully")
+
+    const order = {
+      productName: faker.commerce.productName(),
+      productDescription: faker.commerce.productDescription(),
+      price: faker.commerce.price(),
+    };
+    response.json(Object.assign(order, user.data));
+  } catch (e: any) {
+    response.sendStatus(500);
+  }
 });
 
 app.listen(8080);
