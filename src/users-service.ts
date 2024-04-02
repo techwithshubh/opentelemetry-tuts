@@ -1,10 +1,20 @@
 import init from "./libs/telemetry";
+import initMetrics from "./libs/metrics";
+
 const { tracer } = init("users-service", "0.0.1");
+const { meter } = initMetrics("users-service");
 
 import express, { Request, Response } from "express";
 import { faker } from "@faker-js/faker";
 
 const app = express();
+
+const httpCounter = meter.createCounter('http_calls');
+
+app.use((request, response, next) => {
+    httpCounter.add(1);
+    next();
+});
 
 app.get("/user/:userid", async (request: Request, response: Response) => {
   try {
